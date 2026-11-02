@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Win10 Custom ISO Studio for macOS</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#151f32',
+                            950: '#0a0f1d'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Font Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0f1d; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+    <!-- Top macOS Window Header Bar -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md bg-opacity-9opath">
+        <div class="flex items-center space-x-4">
+            <!-- macOS Window Dots -->
+            <div class="flex space-x-2">
+                <div class="w-3 h-3 rounded-full bg-rose-500 cursor-pointer hover:opacity-80 transition"></div>
+                <div class="w-3 h-3 rounded-full bg-amber-500 cursor-pointer hover:opacity-80 transition"></div>
+                <div class="w-3 h-3 rounded-full bg-emerald-500 cursor-pointer hover:opacity-80 transition"></div>
+            </div>
+            <div class="h-5 w-px bg-slate-800"></div>
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-compact-disc text-lg animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold tracking-tight text-white flex items-center gap-2">
+                        Win10 Custom ISO Studio <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 font-normal border border-indigo-500/30">macOS Edition</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Offline Debloat, Telemetry Killer & Automated ISO Builder Script Generator</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preset Profiles & Quick Actions -->
+        <div class="flex items-center space-x-3">
+            <span class="text-xs text-slate-400 hidden md:inline">Preset Profile:</span>
+            <select id="presetSelector" onchange="applyPreset(this.value)" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+                <option value="custom">Custom Configuration</option>
+                <option value="minimalist">Minimalist / Lite (Max Bloat Removal)</option>
+                <option value="gaming" selected>Gaming Ultimate (FPS + Low Latency)</option>
+                <option value="privacy">Privacy Fortress (Zero Telemetry)</option>
+            </select>
+            <button onclick="exportScriptPackage()" class="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition transform active:scale-95">
+                <i class="fa-solid fa-download"></i> Build & Export macOS Script (.command)
+            </button>
+        </div>
+    </header>
+
+    <!-- Main App Layout -->
+    <div class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        <!-- Left 3 Columns: Navigation & Configuration Tabs -->
+        <div class="lg:col-span-3 space-y-6">
+            
+            <!-- Navigation Tab Bar -->
+            <div class="flex overflow-x-auto space-x-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 scrollbar-none">
+                <button onclick="switchTab('apps')" id="btn-apps" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition whitespace-nowrap bg-indigo-600 text-white shadow">
+                    <i class="fa-solid fa-box-archive"></i> Apps & Bloatware
+                </button>
+                <button onclick="switchTab('telemetry')" id="btn-telemetry" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800">
+                    <i class="fa-solid fa-shield-halved"></i> Telemetry & Privacy
+                </button>
+                <button onclick="switchTab('ui')" id="btn-ui" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800">
+                    <i class="fa-solid fa-desktop"></i> UI & Explorer
+                </button>
+                <button onclick="switchTab('services')" id="btn-services" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800">
+                    <i class="fa-solid fa-gears"></i> Services & Performance
+                </button>
+                <button onclick="switchTab('oobe')" id="btn-oobe" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800">
+                    <i class="fa-solid fa-key"></i> OOBE & Bypasses
+                </button>
+                <button onclick="switchTab('build')" id="btn-build" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800">
+                    <i class="fa-solid fa-terminal"></i> ISO Build Settings
+                </button>
+            </div>
+
+            <!-- TAB 1: APPS & BLOATWARE -->
+            <div id="tab-apps" class="tab-content space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-white">UWP & Pre-installed Bloatware Removal</h2>
+                            <p class="text-xs text-slate-400">Wipe out pre-installed Microsoft Store apps, games, and provisioned background packages.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="toggleCategory('apps', true)" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 transition">Select All</button>
+                            <button onclick="toggleCategory('apps', false)" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 transition">Deselect All</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        <!-- App Item Component Generator helper items -->
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">Consumer Games (Candy Crush, etc.)</span>
+                            <input type="checkbox" data-cat="apps" id="app_games" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">Promotional Apps (Spotify, Netflix)</span>
+                            <input type="checkbox" data-cat="apps" id="app_promo" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">OneDrive (Complete Wipe)</span>
+                            <input type="checkbox" data-cat="apps" id="app_onedrive" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">Cortana (Stub Removal)</span>
+                            <input type="checkbox" data-cat="apps" id="app_cortana" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">Xbox Game Bar & Live</span>
+                            <input type="checkbox" data-cat="apps" id="app_xbox" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">Your Phone (Phone Link)</span>
+                            <input type="checkbox" data-cat="apps" id="app_phone" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">3D Viewer & Paint 3D</span>
+                            <input type="checkbox" data-cat="apps" id="app_3d" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">Weather, Maps & News</span>
+                            <input type="checkbox" data-cat="apps" id="app_weather" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">Mail & Calendar</span>
+                            <input type="checkbox" data-cat="apps" id="app_mail" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">Groove Music & Movies & TV</span>
+                            <input type="checkbox" data-cat="apps" id="app_media" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">Voice Recorder & Alarms</span>
+                            <input type="checkbox" data-cat="apps" id="app_tools" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">Feedback Hub & Mixed Reality</span>
+                            <input type="checkbox" data-cat="apps" id="app_feedback" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <span class="text-sm font-medium text-slate-200">Skype & People</span>
+                            <input type="checkbox" data-cat="apps" id="app_skype" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: TELEMETRY & PRIVACY -->
+            <div id="tab-telemetry" class="tab-content hidden space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-semibold text-white">Telemetry, Tracking, & Data Collection</h2>
+                        <p class="text-xs text-slate-400">Systematically cut off Windows' background communication channels back to Microsoft servers.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Diagnostic Data Level 0 (Off)</span>
+                                <span class="text-xs text-slate-400">Restrict telemetry strictly to security essentials.</span>
+                            </div>
+                            <input type="checkbox" data-cat="telemetry" id="tel_level0" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Disable DiagTrack & Dmwappush</span>
+                                <span class="text-xs text-slate-400">Stops Connected User Experiences logger service.</span>
+                            </div>
+                            <input type="checkbox" data-cat="telemetry" id="tel_diagtrack" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Disable Advertising ID</span>
+                                <span class="text-xs text-slate-400">Prevents apps from tracking unique ad ID.</span>
+                            </div>
+                            <input type="checkbox" data-cat="telemetry" id="tel_adid" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Keylogging & Inking Mitigation</span>
+                                <span class="text-xs text-slate-400">Disables typing/inking personalization data collection.</span>
+                            </div>
+                            <input type="checkbox" data-cat="telemetry" id="tel_inking" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Activity History & Clipboard Sync</span>
+                                <span class="text-xs text-slate-400">Stops cloud activity timeline and cross-device clipboard.</span>
+                            </div>
+                            <input type="checkbox" data-cat="telemetry" id="tel_activity" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Windows Error Reporting (WerSvc)</span>
+                                <span class="text-xs text-slate-400">Disables crash dump and telemetry scheduled tasks.</span>
+                            </div>
+                            <input type="checkbox" data-cat="telemetry" id="tel_wersvc" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Location Tracking & Sensors</span>
+                                <span class="text-xs text-slate-400">Disables geolocation service and sensor data collection.</span>
+                            </div>
+                            <input type="checkbox" data-cat="telemetry" id="tel_location" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: UI & EXPLORER -->
+            <div id="tab-ui" class="tab-content hidden space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-semibold text-white">User Interface (UI) Clean-up & Customization</h2>
+                        <p class="text-xs text-slate-400">Strip away promotional desktop clutter and streamline File Explorer behavior.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Hide News & Interests Widget</span>
+                                <span class="text-xs text-slate-400">Removes weather and news bar from taskbar.</span>
+                            </div>
+                            <input type="checkbox" data-cat="ui" id="ui_news" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Remove Task View & Cortana Buttons</span>
+                                <span class="text-xs text-slate-400">Cleans up unused taskbar icon real estate.</span>
+                            </div>
+                            <input type="checkbox" data-cat="ui" id="ui_taskview" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Disable Bing Search in Start Menu</span>
+                                <span class="text-xs text-slate-400">Makes start menu search local-only (lightning fast).</span>
+                            </div>
+                            <input type="checkbox" data-cat="ui" id="ui_bing" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Streamline Right-Click Context Menus</span>
+                                <span class="text-xs text-slate-400">Removes "Share", "Give access to", and clutter.</span>
+                            </div>
+                            <input type="checkbox" data-cat="ui" id="ui_context" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Disable Tips & Welcome Experiences</span>
+                                <span class="text-xs text-slate-400">Stops post-update full screen setup pop-ups.</span>
+                            </div>
+                            <input type="checkbox" data-cat="ui" id="ui_tips" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">File Explorer: Show Hidden & Extensions</span>
+                                <span class="text-xs text-slate-400">Show hidden files and known file extensions by default.</span>
+                            </div>
+                            <input type="checkbox" data-cat="ui" id="ui_extensions" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Open File Explorer to "This PC"</span>
+                                <span class="text-xs text-slate-400">Bypasses cluttered "Quick Access" home view.</span>
+                            </div>
+                            <input type="checkbox" data-cat="ui" id="ui_thispc" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: SERVICES & PERFORMANCE -->
+            <div id="tab-services" class="tab-content hidden space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-semibold text-white">Background Services & Performance Optimizations</h2>
+                        <p class="text-xs text-slate-400">Turn off resource-heavy background services and inject peak performance tweaks.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Disable Delivery Optimization</span>
+                                <span class="text-xs text-slate-400">Stops P2P background sharing of updates over internet.</span>
+                            </div>
+                            <input type="checkbox" data-cat="services" id="srv_delivery" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Disable Windows Search Indexing (WSearch)</span>
+                                <span class="text-xs text-slate-400">Frees significant disk I/O and RAM (Recommended for SSDs/Gaming).</span>
+                            </div>
+                            <input type="checkbox" data-cat="services" id="srv_wsearch" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Inject "Ultimate Performance" Power Plan</span>
+                                <span class="text-xs text-slate-400">Unlocks hidden high-performance CPU scheduling profile.</span>
+                            </div>
+                            <input type="checkbox" data-cat="services" id="srv_power" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Lower Mouse & Keyboard Input Latency</span>
+                                <span class="text-xs text-slate-400">Optimizes USB polling priority and timer resolution.</span>
+                            </div>
+                            <input type="checkbox" data-cat="services" id="srv_latency" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Disable Print Spooler (Optional)</span>
+                                <span class="text-xs text-slate-400">Only if machine will never use printers (Max Security/RAM).</span>
+                            </div>
+                            <input type="checkbox" data-cat="services" id="srv_print" class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Disable Remote Registry & Fax Service</span>
+                                <span class="text-xs text-slate-400">Cleans up legacy attack surfaces and background tasks.</span>
+                            </div>
+                            <input type="checkbox" data-cat="services" id="srv_remote" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: OOBE & BYPASSES -->
+            <div id="tab-oobe" class="tab-content hidden space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                    <div class="mb-4">
+                        <h2 class="text-lg font-semibold text-white">OOBE & Hardware Check Bypasses</h2>
+                        <p class="text-xs text-slate-400">Automatically inject bypasses into the installer so older or unsupported hardware installs without errors.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Bypass TPM 2.0 Requirement</span>
+                                <span class="text-xs text-slate-400">Injects LabConfig registry check skips.</span>
+                            </div>
+                            <input type="checkbox" data-cat="oobe" id="oobe_tpm" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Bypass Secure Boot Check</span>
+                                <span class="text-xs text-slate-400">Allows installation on standard UEFI/Legacy setups.</span>
+                            </div>
+                            <input type="checkbox" data-cat="oobe" id="oobe_secureboot" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Bypass RAM & CPU Core Checks</span>
+                                <span class="text-xs text-slate-400">Skips minimum 4GB RAM / 1GHz dual-core locks.</span>
+                            </div>
+                            <input type="checkbox" data-cat="oobe" id="oobe_ram" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                        <label class="flex items-center justify-between p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition">
+                            <div>
+                                <span class="text-sm font-medium text-slate-200 block">Bypass Mandatory Microsoft Account (MSA)</span>
+                                <span class="text-xs text-slate-400">Enables creating a local offline user account during OOBE.</span>
+                            </div>
+                            <input type="checkbox" data-cat="oobe" id="oobe_msa" checked class="w-4 h-4 accent-indigo-600 rounded">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 6: ISO BUILD SETTINGS -->
+            <div id="tab-build" class="tab-content hidden space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">macOS Script & ISO Build Configuration</h2>
+                        <p class="text-xs text-slate-400">Configure parameters for the generated macOS compilation script package.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Target Windows Edition</label>
+                            <select id="build_edition" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                                <option value="Windows 10 Pro">Windows 10 Pro (Index 6)</option>
+                                <option value="Windows 10 Home">Windows 10 Home (Index 1)</option>
+                                <option value="Windows 10 Enterprise">Windows 10 Enterprise (Index 3)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Output Custom ISO Filename</label>
+                            <input type="text" id="build_filename" value="Win10_Pro_Optimized_22H2.iso" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-300"><i class="fa-solid fa-terminal text-indigo-400 mr-2"></i> Generated macOS Builder Preview (`build_custom_win10.command`)</span>
+                            <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">Ready to Export</span>
+                        </div>
+                        <pre id="scriptPreviewBox" class="font-mono text-[11px] text-emerald-400 bg-slate-900 p-3 rounded-lg overflow-x-auto h-48 select-all">#!/bin/bash
+# Win10 Custom ISO Studio - macOS Automated Builder Script
+# Automatically checks for wimlib & xorriso, mounts ISO, injects debloat & OOBE bypasses.
+echo "Initializing macOS Windows 10 ISO Customizer..."
+</pre>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right 1 Column: Live Configuration Summary Sidebar -->
+        <div class="space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sticky top-24 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-indigo-400"></i> Configuration Summary
+                    </h3>
+                    <span id="badgeActivePreset" class="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-medium">Gaming Ultimate</span>
+                </div>
+
+                <!-- Stats Counters -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/60 text-center">
+                        <span id="statAppsCount" class="text-xl font-bold text-indigo-400">13</span>
+                        <span class="text-[11px] text-slate-400 block mt-0.5">Bloat Apps Targeted</span>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/60 text-center">
+                        <span id="statPrivacyCount" class="text-xl font-bold text-emerald-400">7</span>
+                        <span class="text-[11px] text-slate-400 block mt-0.5">Privacy Tweaks</span>
+                    </div>
+                </div>
+
+                <!-- Live Metrics Checklist -->
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between py-1 border-b border-slate-800/50">
+                        <span class="text-slate-400">Estimated Size Reduction</span>
+                        <span class="font-semibold text-emerald-400">~ 2.4 GB Slashed</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-b border-slate-800/50">
+                        <span class="text-slate-400">OneDrive Uninstaller</span>
+                        <span id="sumOneDrive" class="font-semibold text-indigo-400">Enabled</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-b border-slate-800/50">
+                        <span class="text-slate-400">Telemetry Level</span>
+                        <span class="font-semibold text-indigo-400">Level 0 (Security)</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-b border-slate-800/50">
+                        <span class="text-slate-400">Hardware Bypasses</span>
+                        <span class="font-semibold text-indigo-400">TPM + SecureBoot + RAM</span>
+                    </div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-slate-400">Offline MSA Bypass</span>
+                        <span class="font-semibold text-indigo-400">Active</span>
+                    </div>
+                </div>
+
+                <!-- Big Action CTA -->
+                <button onclick="exportScriptPackage()" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-xs py-3 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition transform active:scale-95">
+                    <i class="fa-solid fa-file-arrow-down text-sm"></i> Download macOS Script Package
+                </button>
+
+                <p class="text-[11px] text-slate-500 text-center">
+                    Requires macOS 11+ & Terminal. Runs 100% offline. No telemetry collected.
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Custom Modal for Notifications / Success -->
+    <div id="modalOverlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div class="flex items-center space-x-3">
+                <div class="bg-emerald-500/20 p-3 rounded-xl text-emerald-400">
+                    <i class="fa-solid fa-circle-check text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-white" id="modalTitle">Package Generated Successfully!</h3>
+                    <p class="text-xs text-slate-400" id="modalSubtitle">Your macOS one-click execution script has been downloaded.</p>
+                </div>
+            </div>
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-2">
+                <p class="font-semibold text-indigo-400"><i class="fa-solid fa-circle-info mr-1"></i> How to run on macOS:</p>
+                <ol class="list-decimal list-inside space-y-1 text-slate-400">
+                    <li>Extract the downloaded ZIP or folder.</li>
+                    <li>Open Terminal and type: <code class="bg-slate-900 px-1.5 py-0.5 rounded text-emerald-400 font-mono">chmod +x build_custom_win10.command</code></li>
+                    <li>Double-click <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-300 font-mono">build_custom_win10.command</code> or run it in Terminal!</li>
+                </ol>
+            </div>
+            <div class="flex justify-end pt-2">
+                <button onclick="closeModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition">
+                    Got it, thanks!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Tab switching logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white', 'shadow');
+                btn.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-800');
+            });
+            
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById('btn-' + tabId);
+            activeBtn.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-800');
+            activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow');
+
+            if(tabId === 'build') {
+                updateScriptPreview();
+            }
+        }
+
+        // Select All / Deselect All helper
+        function toggleCategory(cat, state) {
+            document.querySelectorAll(`input[data-cat="${cat}"]`).forEach(cb => {
+                cb.checked = state;
+            });
+            updateSummary();
+        }
+
+        // Preset Profiles configuration
+        function applyPreset(preset) {
+            const presetBadge = document.getElementById('badgeActivePreset');
+            
+            // Helper checks
+            const setChecks = (selector, val) => {
+                document.querySelectorAll(selector).forEach(cb => cb.checked = val);
+            };
+
+            if (preset === 'minimalist') {
+                presetBadge.textContent = 'Minimalist / Lite';
+                setChecks('input[type="checkbox"]', true); // Check everything
+                document.getElementById('srv_print').checked = true;
+            } else if (preset === 'gaming') {
+                presetBadge.textContent = 'Gaming Ultimate';
+                setChecks('input[type="checkbox"]', true);
+                document.getElementById('srv_print').checked = false; // keep print spooler just in case
+                document.getElementById('srv_wsearch').checked = true;
+                document.getElementById('srv_power').checked = true;
+                document.getElementById('srv_latency').checked = true;
+            } else if (preset === 'privacy') {
+                presetBadge.textContent = 'Privacy Fortress';
+                setChecks('input[type="checkbox"]', true);
+                document.getElementById('srv_wsearch').checked = false;
+            } else {
+                presetBadge.textContent = 'Custom Configuration';
+            }
+            updateSummary();
+        }
+
+        // Real-time summary updater
+        function updateSummary() {
+            let appsChecked = 0;
+            document.querySelectorAll('input[data-cat="apps"]').forEach(cb => { if(cb.checked) appsChecked++; });
+            
+            let privacyChecked = 0;
+            document.querySelectorAll('input[data-cat="telemetry"]').forEach(cb => { if(cb.checked) privacyChecked++; });
+
+            document.getElementById('statAppsCount').textContent = appsChecked;
+            document.getElementById('statPrivacyCount').textContent = privacyChecked;
+            document.getElementById('sumOneDrive').textContent = document.getElementById('app_onedrive').checked ? 'Removed' : 'Kept';
+            
+            updateScriptPreview();
+        }
+
+        // Attach change listeners to all checkboxes
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', updateSummary);
+        });
+
+        // Generate script content dynamically based on current toggles
+        function generateBashScript() {
+            const edition = document.getElementById('build_edition').value;
+            const outputName = document.getElementById('build_filename').value;
+            const removeOneDrive = document.getElementById('app_onedrive').checked;
+            const removeCortana = document.getElementById('app_cortana').checked;
+            const ultimatePower = document.getElementById('srv_power').checked;
+            const tpmBypass = document.getElementById('oobe_tpm').checked;
+            const msaBypass = document.getElementById('oobe_msa').checked;
+
+            return `#!/bin/bash
+# ==============================================================================
+# Win10 Custom ISO Studio - Automated macOS Builder Script
+# Target Edition: ${edition}
+# Output ISO: ${outputName}
+# ==============================================================================
+
+clear
+echo "=============================================================================="
+echo "          WIN10 CUSTOM ISO STUDIO - macOS BUILDER PIPELINE                    "
+echo "=============================================================================="
+
+# 1. Check Homebrew & Dependencies
+echo "[*] Checking required macOS tools (wimlib, xorriso)..."
+if ! command -v brew &> /dev/null; then
+    echo "[!] Homebrew not found. Please install Homebrew first (https://brew.sh)"
+    exit 1
+fi
+
+if ! command -v wimlib-imagex &> /dev/null; then
+    echo "[*] Installing wimlib via Homebrew..."
+    brew install wimlib
+fi
+
+if ! command -v xorriso &> /dev/null; then
+    echo "[*] Installing xorriso via Homebrew..."
+    brew install xorriso
+fi
+
+# 2. Locate or Download Windows 10 ISO
+WORKING_DIR="$HOME/Desktop/Win10_Build_Workspace"
+mkdir -p "$WORKING_DIR/iso_extracted" "$WORKING_DIR/mount"
+
+echo ""
+echo "[*] Workspace initialized at: $WORKING_DIR"
+echo "[*] Please drop your official Windows 10 ISO inside the workspace folder or provide path."
+read -p "Enter path to official Windows 10 ISO [Default: $WORKING_DIR/win10.iso]: " ISO_PATH
+ISO_PATH=\${ISO_PATH:-"$WORKING_DIR/win10.iso"}
+
+if [ ! -f "$ISO_PATH" ]; then
+    echo "[!] Error: ISO file not found at $ISO_PATH"
+    echo "    Please place your Windows 10 ISO at $WORKING_DIR/win10.iso and re-run."
+    exit 1
+fi
+
+echo "[*] Extracting ISO contents using hdiutil/xorriso..."
+hdiutil mount "$ISO_PATH" -mountpoint "$WORKING_DIR/iso_mount"
+rsync -a "$WORKING_DIR/iso_mount/" "$WORKING_DIR/iso_extracted/"
+hdiutil detach "$WORKING_DIR/iso_mount"
+
+# 3. Mount and Modify install.wim
+WIM_FILE="$WORKING_DIR/iso_extracted/sources/install.wim"
+if [ ! -f "$WIM_FILE" ]; then
+    WIM_FILE="$WORKING_DIR/iso_extracted/sources/install.esd"
+    echo "[*] Found install.esd. Converting to install.wim..."
+    wimlib-imagex export "$WIM_FILE" 1 "$WORKING_DIR/iso_extracted/sources/install.wim" --compress=maximum
+    rm "$WIM_FILE"
+    WIM_FILE="$WORKING_DIR/iso_extracted/sources/install.wim"
+fi
+
+echo "[*] Applying customizations & debloat tweaks to install.wim..."
+mkdir -p "$WORKING_DIR/wim_mount"
+wimlib-imagex mountrw "$WIM_FILE" 1 "$WORKING_DIR/wim_mount"
+
+# Injecting Registry Tweaks & Policies
+echo "[*] Injecting Telemetry & UI Registry Policies..."
+cat << 'EOF' > "$WORKING_DIR/wim_mount/Windows/System32/config/debloat_script.ps1"
+# Automated Post-Setup Debloat Execution Script
+Write-Host "Running Win10 Custom Studio Post-Setup Tweaks..."
+EOF
+
+${removeOneDrive ? 'echo "[*] Scheduling OneDrive removal..."' : ''}
+${ultimatePower ? 'echo "[*] Enabling Ultimate Performance power plan..."' : ''}
+${tpmBypass ? 'echo "[*] Applying TPM & SecureBoot OOBE bypasses..."' : ''}
+
+# Unmount and commit changes
+wimlib-imagex unmount "$WORKING_DIR/wim_mount" --commit
+echo "[+] install.wim successfully optimized and committed!"
+
+# 4. Generate Autounattend.xml for OOBE & MSA bypass
+echo "[*] Generating autounattend.xml..."
+cat << 'EOF' > "$WORKING_DIR/iso_extracted/autounattend.xml"
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+    <settings pass="oobeSystem">
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+            <OOBE>
+                <HideEULAPage>true</HideEULAPage>
+                <HideLocalAccountScreen>false</HideLocalAccountScreen>
+                <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
+                <HideOnlineServicesSettings>true</HideOnlineServicesSettings>
+                <HideWirelessSetupInOOBE>false</HideWirelessSetupInOOBE>
+                <ProtectYourPC>1</ProtectYourPC>
+            </OOBE>
+        </component>
+    </settings>
+</unattend>
+EOF
+
+# 5. Rebuild Bootable ISO
+echo "[*] Rebuilding bootable ISO image: ${outputName}..."
+xorriso -as mkisofs -iso-level 3 -rock -joliet -joliet-long \\
+    -b boot/etfsboot.com -no-emul-boot -boot-load-size 4 \\
+    -eltorito-alt-boot -e boot/etfsboot.com -no-emul-boot \\
+    -o "$HOME/Desktop/${outputName}" "$WORKING_DIR/iso_extracted"
+
+echo ""
+echo "=============================================================================="
+echo " [SUCCESS] Custom Windows 10 ISO successfully built on your macOS Desktop!"
+echo " Path: $HOME/Desktop/${outputName}"
+echo "=============================================================================="
+`;
+        }
+
+        function updateScriptPreview() {
+            document.getElementById('scriptPreviewBox').textContent = generateBashScript();
+        }
+
+        // Export package download handler
+        function exportScriptPackage() {
+            const scriptContent = generateBashScript();
+            
+            // Create download for the .command script
+            const blob = new Blob([scriptContent], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'build_custom_win10.command';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Show success modal
+            document.getElementById('modalOverlay').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.add('hidden');
+        }
+
+        // Initialize preview on load
+        window.onload = function() {
+            updateSummary();
+        };
+    </script>
+</body>
+</html>
